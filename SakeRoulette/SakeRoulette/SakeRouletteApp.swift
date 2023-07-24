@@ -25,7 +25,7 @@ struct RouletteContentView: View {
         NavigationView {
             VStack {
                 ZStack {
-                    RouletteView(sectionTitles: sectionTitles, isSpinning: $isSpinning, rotation: $rotation, animationDuration: 10.0)
+                    RouletteView(sectionTitles: $sectionTitles, isSpinning: $isSpinning, rotation: $rotation, animationDuration: 10.0)
 
                     GeometryReader { geometry in
                         Path { path in
@@ -37,7 +37,7 @@ struct RouletteContentView: View {
                             path.closeSubpath()
                         }
                         .fill(Color.red)
-                        .offset(x: 0, y: geometry.size.height / 6)
+                        .offset(x: 0, y: geometry.size.height / 9)
                     }
                 }
 
@@ -54,7 +54,6 @@ struct RouletteContentView: View {
                 }
                 .padding()
                 
-                Spacer()
             }
             .navigationTitle("Roulette")
         }

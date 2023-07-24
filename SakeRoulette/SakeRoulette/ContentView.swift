@@ -48,7 +48,7 @@ struct ContentView: View {
            List {
                ForEach(sectionTitles.indices, id: \.self) { index in
                    HStack {
-                       Text(sectionTitles[index])
+                       Text(safeTitle(for: index))
                        Spacer()
                        Button(action: {
                            removeTitle(at: IndexSet(integer: index))
@@ -60,7 +60,7 @@ struct ContentView: View {
                }
            }
            
-           RouletteView(sectionTitles: sectionTitles, isSpinning: $isSpinning, rotation: $rotation, animationDuration: 10.0)
+           RouletteView(sectionTitles: $sectionTitles, isSpinning: $isSpinning, rotation: $rotation, animationDuration: 10.0)
            Button("Start") {
                withAnimation {
                    self.isSpinning = true
@@ -76,13 +76,20 @@ struct ContentView: View {
        }
    }
    
+    func safeTitle(for index: Int) -> String {
+        if sectionTitles.indices.contains(index) {
+            return safeTitle(for: index)
+        } else {
+            return ""
+        }
+    }
    private func removeTitle(at offsets: IndexSet) {
        sectionTitles.remove(atOffsets: offsets)
    }
 }
 
 struct RouletteView: View {
-   let sectionTitles: [String]
+   @Binding var sectionTitles: [String]
    @Binding var isSpinning: Bool
    @Binding var rotation: Double
    var animationDuration: Double
@@ -104,7 +111,7 @@ struct RouletteView: View {
 
 
    func positionedTextForSection(_ index: Int, geometry: GeometryProxy) -> some View {
-       Text(self.sectionTitles[index])
+       Text(self.safeTitle(for: index))
            .font(.system(size: geometry.size.width / 20))
            .rotationEffect(.degrees(Double(index) * (360.0 / Double(self.sectionTitles.count))), anchor: .center)
            .position(x: geometry.size.width / 2, y: geometry.size.height / 4)
@@ -132,6 +139,14 @@ struct RouletteView: View {
        default: return Color.blue // fallback color
        }
    }
+    
+    func safeTitle(for index: Int) -> String {
+            if sectionTitles.indices.contains(index) {
+                return sectionTitles[index]
+            } else {
+                return ""
+            }
+        }
 }
 
 struct SpinningAnimation: AnimatableModifier {

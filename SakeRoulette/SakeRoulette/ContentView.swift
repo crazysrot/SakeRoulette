@@ -25,14 +25,42 @@ struct RouletteSection: Shape {
    }
 }
 
-
 struct ContentView: View {
+   @State private var sectionTitles = ["Sake1", "Sake2", "Sake3", "Sake4", "Sake5", "Sake6", "Sake7", "Sake8", "Sake9", "Sake10"]
+   @State private var newTitle = ""
    @State private var isSpinning: Bool = false
    @State private var rotation: Double = 0
 
    var body: some View {
        VStack {
-           RouletteView(numberOfSections: 10, isSpinning: $isSpinning, rotation: $rotation, animationDuration: 10.0)
+           HStack {
+               TextField("Add new sake title", text: $newTitle)
+                   .textFieldStyle(RoundedBorderTextFieldStyle())
+               Button("Add") {
+                   if !newTitle.isEmpty {
+                       sectionTitles.append(newTitle)
+                       newTitle = ""
+                   }
+               }
+           }
+           .padding()
+           
+           List {
+               ForEach(sectionTitles.indices, id: \.self) { index in
+                   HStack {
+                       Text(sectionTitles[index])
+                       Spacer()
+                       Button(action: {
+                           removeTitle(at: IndexSet(integer: index))
+                       }) {
+                           Image(systemName: "trash")
+                               .foregroundColor(.red)
+                       }
+                   }
+               }
+           }
+           
+           RouletteView(sectionTitles: sectionTitles, isSpinning: $isSpinning, rotation: $rotation, animationDuration: 10.0)
            Button("Start") {
                withAnimation {
                    self.isSpinning = true
@@ -47,44 +75,54 @@ struct ContentView: View {
            .padding()
        }
    }
+   
+   private func removeTitle(at offsets: IndexSet) {
+       sectionTitles.remove(atOffsets: offsets)
+   }
 }
 
-
 struct RouletteView: View {
-   let numberOfSections: Int
+   let sectionTitles: [String]
    @Binding var isSpinning: Bool
    @Binding var rotation: Double
    var animationDuration: Double
 
-   var body: some View {
-       GeometryReader { geometry in
-           ZStack {
-               ForEach(0..<self.numberOfSections) { i in
-                   Path { path in
-                       let width = geometry.size.width
-                       let height = geometry.size.height
-                       let segment = Angle(degrees: 360 / Double(self.numberOfSections))
-                       let start = Angle(degrees: segment.degrees * Double(i))
-                       path.move(to: .init(x: width / 2, y: height / 2))
-                       path.addArc(center: .init(x: width / 2, y: height / 2), radius: width / 2, startAngle: start, endAngle: start + segment, clockwise: false)
-                       path.closeSubpath()
+    var body: some View {
+           GeometryReader { geometry in
+               ZStack {
+                   ForEach(0..<self.sectionTitles.count) { i in
+                       self.sectionPath(i, geometry: geometry)
+                           .fill(self.colorForSection(i))
                    }
-                   .fill(self.colorForSection(i))
+                   ForEach(0..<self.sectionTitles.count) { i in
+                       self.positionedTextForSection(i, geometry: geometry)
+                   }
                }
-
-               ForEach(0..<self.numberOfSections) { i in
-                   Text(String(i))
-                       .font(.system(size: geometry.size.width / 20)) // Adjust font size based on the roulette size
-                       .rotationEffect(.degrees(Double(i) * (360.0 / Double(self.numberOfSections))), anchor: .center)
-                       .position(x: geometry.size.width / 2, y: geometry.size.height / 4)
-                       .rotationEffect(.degrees(-Double(i) * (360.0 / Double(self.numberOfSections))), anchor: .center)
-                   }
+               .spinning($isSpinning, duration: animationDuration, totalRotation: $rotation)
            }
        }
-       .spinning($isSpinning, duration: animationDuration, totalRotation: $rotation)
+
+
+   func positionedTextForSection(_ index: Int, geometry: GeometryProxy) -> some View {
+       Text(self.sectionTitles[index])
+           .font(.system(size: geometry.size.width / 20))
+           .rotationEffect(.degrees(Double(index) * (360.0 / Double(self.sectionTitles.count))), anchor: .center)
+           .position(x: geometry.size.width / 2, y: geometry.size.height / 4)
+           .rotationEffect(.degrees(-Double(index) * (360.0 / Double(self.sectionTitles.count))), anchor: .center)
    }
-
-
+    
+   func sectionPath(_ index: Int, geometry: GeometryProxy) -> Path {
+       Path { path in
+           let width = geometry.size.width
+           let height = geometry.size.height
+           let segment = Angle(degrees: 360 / Double(self.sectionTitles.count))
+           let start = Angle(degrees: segment.degrees * Double(index))
+           path.move(to: .init(x: width / 2, y: height / 2))
+           path.addArc(center: .init(x: width / 2, y: height / 2), radius: width / 2, startAngle: start, endAngle: start + segment, clockwise: false)
+           path.closeSubpath()
+       }
+   }
+    
    func colorForSection(_ index: Int) -> Color {
        switch index % 4 {
        case 0: return Color(red: 255/255, green: 105/255, blue: 180/255) // HotPink

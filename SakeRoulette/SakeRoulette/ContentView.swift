@@ -7,24 +7,6 @@
 
 import SwiftUI
 
-struct RouletteSection: Shape {
-   let startAngle: Angle
-   let endAngle: Angle
-
-   func path(in rect: CGRect) -> Path {
-       var path = Path()
-       let center = CGPoint(x: rect.midX, y: rect.midY)
-       path.move(to: center)
-       path.addArc(center: center,
-                   radius: rect.width / 2,
-                   startAngle: startAngle,
-                   endAngle: endAngle,
-                   clockwise: false)
-       path.addLine(to: center)
-       return path
-   }
-}
-
 struct ContentView: View {
    @State private var sectionTitles = ["Sake1", "Sake2", "Sake3", "Sake4", "Sake5", "Sake6", "Sake7", "Sake8", "Sake9", "Sake10"]
    @State private var newTitle = ""
@@ -33,6 +15,7 @@ struct ContentView: View {
 
    var body: some View {
        VStack {
+           RouletteView(sectionTitles: $sectionTitles, isSpinning: $isSpinning, rotation: $rotation, animationDuration: 10000.0)
            HStack {
                TextField("Add new sake title", text: $newTitle)
                    .textFieldStyle(RoundedBorderTextFieldStyle())
@@ -40,8 +23,11 @@ struct ContentView: View {
                    if !newTitle.isEmpty {
                        sectionTitles.append(newTitle)
                        newTitle = ""
+                       rotation = 0  // 追加
+                       isSpinning = false  // 追加
                    }
                }
+               
            }
            .padding()
            
@@ -59,16 +45,15 @@ struct ContentView: View {
                    }
                }
            }
-           
-           RouletteView(sectionTitles: $sectionTitles, isSpinning: $isSpinning, rotation: $rotation, animationDuration: 10.0)
+
            Button("Start") {
                withAnimation {
                    self.isSpinning = true
+                   self.rotation += 3600 + Double(arc4random_uniform(360))
                }
                DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
                    withAnimation {
                        self.isSpinning = false
-                       self.rotation += 3600 + Double(arc4random_uniform(360))
                    }
                }
            }
@@ -78,7 +63,7 @@ struct ContentView: View {
    
     func safeTitle(for index: Int) -> String {
         if sectionTitles.indices.contains(index) {
-            return safeTitle(for: index)
+            return sectionTitles[index] //safeTitle(for: index)
         } else {
             return ""
         }
@@ -89,7 +74,9 @@ struct ContentView: View {
 }
 
 struct RouletteView: View {
-   @Binding var sectionTitles: [String]
+//   let sectionTitles: [String]
+   @Binding var sectionTitles: [String]  // ここを変更
+   @State var sectionColors: [Color] = []
    @Binding var isSpinning: Bool
    @Binding var rotation: Double
    var animationDuration: Double
@@ -105,8 +92,9 @@ struct RouletteView: View {
                        self.positionedTextForSection(i, geometry: geometry)
                    }
                }
-               .spinning($isSpinning, duration: animationDuration, totalRotation: $rotation)
+               .spinning($isSpinning, totalRotation: $rotation)
            }
+        
        }
 
 
@@ -151,23 +139,22 @@ struct RouletteView: View {
 
 struct SpinningAnimation: AnimatableModifier {
    @Binding var isSpinning: Bool
-   var animatableData: CGFloat {
-       get { return CGFloat(self.isSpinning ? 1 : 0) }
-       set { self.isSpinning = newValue > 0.5 }
+   var rotation: Double
+   var animatableData: Double {
+       get { return rotation }
+       set { rotation = newValue }
    }
-   var animationDuration: Double
-    @Binding var totalRotation: Double  // Add this
 
-   func body(content: Content) -> some View {
+    func body(content: Content) -> some View {
        return content
-           .rotationEffect(Angle(degrees: totalRotation + Double(self.animatableData)))
-           .animation(self.isSpinning ? Animation.linear(duration: self.animationDuration) : .default)
+           .rotationEffect(Angle(degrees: rotation))
+           .animation(isSpinning ? Animation.linear(duration: 10.0) : .default)
    }
 }
 
 extension View {
-    func spinning(_ isSpinning: Binding<Bool>, duration: Double, totalRotation: Binding<Double>) -> some View {
-        self.modifier(SpinningAnimation(isSpinning: isSpinning, animationDuration: duration, totalRotation: totalRotation))
+    func spinning(_ isSpinning: Binding<Bool>, totalRotation: Binding<Double>) -> some View {
+        self.modifier(SpinningAnimation(isSpinning: isSpinning, rotation: totalRotation.wrappedValue))
     }
 }
 

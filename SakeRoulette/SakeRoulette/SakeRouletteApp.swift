@@ -17,15 +17,17 @@ struct ListAppApp: App {
 }
 
 struct RouletteContentView: View {
-    @State private var sectionTitles = ["Sake1", "Sake2", "Sake3", "Sake4", "Sake5", "Sake6", "Sake7", "Sake8", "Sake9", "Sake10"]
+    @State private var sectionTitles = ["Sake1", "Sake2", "Sake3", "Sake4", "Sake5", "Sake6", "Sake7", "Sake8", "Sake9", "Sake10", "Sake11", "Sake12", "Sake13", "Sake14", "Sake15", "Sake16", "Sake17", "Sake18", "Sake19", "Sake20"]
     @State private var isSpinning: Bool = false
     @State private var rotation: Double = 0
+    @State var animationDuration: Double = 20.0 // Here is the missing part
 
     var body: some View {
         NavigationView {
             VStack {
                 ZStack {
-                    RouletteView(sectionTitles: $sectionTitles, isSpinning: $isSpinning, rotation: $rotation, animationDuration: 10000.0)
+                    RouletteView(sectionTitles: $sectionTitles, isSpinning: $isSpinning, rotation: $rotation, animationDuration: $animationDuration)
+//                    RouletteView(sectionTitles: $sectionTitles, isSpinning: $isSpinning, rotation: $rotation, animationDuration: 20.0)
 
                     GeometryReader { geometry in
                         Path { path in
@@ -44,19 +46,18 @@ struct RouletteContentView: View {
                 Button("Start") {
                     withAnimation {
                         self.isSpinning = true
-                        self.rotation += 3600 + Double(arc4random_uniform(360))
+                        self.rotation += 1000 + Double(arc4random_uniform(360))
                     }
                 }
                 .padding()
                 
-                NavigationLink(destination: SettingsView(sectionTitles: $sectionTitles, rotation: $rotation, isSpinning: $isSpinning)) {
-                    Text("Settings")
+                NavigationLink(destination: SettingsView(sectionTitles: $sectionTitles, rotation: $rotation, isSpinning: $isSpinning, animationDuration: $animationDuration)) { // 追加
+                    Text("設定")
                 }
                 .padding()
                 
-//                Spacer()
             }
-            .navigationTitle("Roulette")
+            .navigationTitle("Match Pomp Roulette")
         }
     }
 }
@@ -67,6 +68,7 @@ struct SettingsView: View {
     @Binding var isSpinning: Bool
     @State private var newTitle = ""
     @State private var editingIndex: Int?
+    @Binding var animationDuration: Double // 追加
 
     var body: some View {
         VStack {
@@ -118,8 +120,12 @@ struct SettingsView: View {
                     }
                 }
             }
+            Text("ルーレット回転時間: \(animationDuration)")
+                .padding()
+            Slider(value: $animationDuration, in: 1.0...60.0)
+                            .padding()
         }
-        .navigationTitle("Settings")
+        .navigationTitle("設定")
     }
 
     private func removeTitle(at offsets: IndexSet) {

@@ -8,7 +8,7 @@
 import SwiftUI
 
 @main
-struct ListAppApp: App {
+struct MatchPompApp: App {
     var body: some Scene {
         WindowGroup {
             RouletteContentView()

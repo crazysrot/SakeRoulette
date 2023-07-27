@@ -1,5 +1,5 @@
 //
-//  SakeRouletteApp.swift
+//  ContentView.swift
 //  SakeRoulette
 //
 //  Created by crazysrot on 2023/07/23.
@@ -7,132 +7,165 @@
 
 import SwiftUI
 
-@main
-struct MatchPompApp: App {
-    var body: some Scene {
-        WindowGroup {
-            RouletteContentView()
+struct ContentView: View {
+   @State private var sectionTitles = ["Sake1", "Sake2", "Sake3", "Sake4", "Sake5", "Sake6", "Sake7", "Sake8", "Sake9", "Sake10", "Sake11", "Sake12", "Sake13", "Sake14", "Sake15", "Sake16", "Sake17", "Sake18", "Sake19", "Sake20"]
+   @State private var newTitle = ""
+   @State private var isSpinning: Bool = false
+   @State private var rotation: Double = 0
+   @Binding private var animationDuration: Double
+    
+
+   var body: some View {
+       VStack {
+           RouletteView(sectionTitles: $sectionTitles, isSpinning: $isSpinning, rotation: $rotation, animationDuration: $animationDuration)
+           
+           HStack {
+               TextField("Add new sake title", text: $newTitle)
+                   .textFieldStyle(RoundedBorderTextFieldStyle())
+               Button("Add") {
+                   if !newTitle.isEmpty {
+                       sectionTitles.append(newTitle)
+                       newTitle = ""
+                       rotation = 0
+                       isSpinning = false
+                   }
+               }
+               
+           }
+           .padding()
+           
+           List {
+               ForEach(sectionTitles.indices, id: \.self) { index in
+                   HStack {
+                       Text(safeTitle(for: index))
+                       Spacer()
+                       Button(action: {
+                           removeTitle(at: IndexSet(integer: index))
+                       }) {
+                           Image(systemName: "trash")
+                               .foregroundColor(.red)
+                       }
+                   }
+               }
+           }
+
+           Button("Start") {
+               withAnimation {
+                   self.isSpinning = true
+                   self.rotation += 1000 + Double(arc4random_uniform(360))
+               }
+               #imageLiteral(resourceName: "simulator_screenshot_7C09E647-23E9-41C3-A374-D1EE8EDDB7A5.png")
+               DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                   withAnimation {
+                       self.isSpinning = false
+                   }
+               }
+           }
+           .padding()
+       }
+       // ここで`SpinningAnimation`と`SettingsView`に`$animationDuration`を渡します
+       RouletteView(sectionTitles: $sectionTitles, isSpinning: $isSpinning, rotation: $rotation, animationDuration: $animationDuration) // 変更
+       SettingsView(sectionTitles: $sectionTitles, rotation: $rotation, isSpinning: $isSpinning, animationDuration: $animationDuration) // 変更
+   }
+   
+    func safeTitle(for index: Int) -> String {
+        if sectionTitles.indices.contains(index) {
+            return sectionTitles[index] //safeTitle(for: index)
+        } else {
+            return ""
         }
     }
+   private func removeTitle(at offsets: IndexSet) {
+       sectionTitles.remove(atOffsets: offsets)
+   }
 }
 
-struct RouletteContentView: View {
-    @State private var sectionTitles = ["Sake1", "Sake2", "Sake3", "Sake4", "Sake5", "Sake6", "Sake7", "Sake8", "Sake9", "Sake10", "Sake11", "Sake12", "Sake13", "Sake14", "Sake15", "Sake16", "Sake17", "Sake18", "Sake19", "Sake20"]
-    @State private var isSpinning: Bool = false
-    @State private var rotation: Double = 0
-    @State var animationDuration: Double = 20.0
+struct RouletteView: View {
+//   let sectionTitles: [String]
+   @Binding var sectionTitles: [String]
+   @State var sectionColors: [Color] = []
+   @Binding var isSpinning: Bool
+   @Binding var rotation: Double
+   @Binding var animationDuration: Double
 
     var body: some View {
-        NavigationView {
-            VStack {
-                ZStack {
-                    RouletteView(sectionTitles: $sectionTitles, isSpinning: $isSpinning, rotation: $rotation, animationDuration: $animationDuration)
+           GeometryReader { geometry in
+               ZStack {
+                   ForEach(0..<self.sectionTitles.count) { i in
+                       self.sectionPath(i, geometry: geometry)
+                           .fill(self.colorForSection(i))
+                   }
+                   ForEach(0..<self.sectionTitles.count) { i in
+                       self.positionedTextForSection(i, geometry: geometry)
+                   }
+               }
+               .spinning($isSpinning, totalRotation: $rotation, animationDuration: $animationDuration)
+           }
+        
+       }
 
-                    GeometryReader { geometry in
-                        Path { path in
-                            let width = geometry.size.width / 20
-                            let height = geometry.size.height / 15
-                            path.move(to: CGPoint(x: geometry.size.width / 2 - width / 2, y: 0))
-                            path.addLine(to: CGPoint(x: geometry.size.width / 2 + width / 2, y: 0))
-                            path.addLine(to: CGPoint(x: geometry.size.width / 2, y: height))
-                            path.closeSubpath()
-                        }
-                        .fill(Color.red)
-                        .offset(x: 0, y: geometry.size.height / 9)
-                    }
-                }
+    func positionedTextForSection(_ index: Int, geometry: GeometryProxy) -> some View {
+        let anglePerSegment = 360.0 / Double(self.sectionTitles.count)
+        let angle = Double(index) * anglePerSegment
+        let rotatedAngle = angle - 90 + (anglePerSegment / 2) // Half of the angle per segment is added
 
-                Button("Start") {
-                    withAnimation {
-                        self.isSpinning = true
-                        self.rotation += 1000 + Double(arc4random_uniform(360))
-                    }
-                }
-                .padding()
-                
-                NavigationLink(destination: SettingsView(sectionTitles: $sectionTitles, rotation: $rotation, isSpinning: $isSpinning, animationDuration: $animationDuration)) {
-                    Text("設定")
-                }
-                .padding()
-                
-            }
-            .navigationTitle("Match Pomp Roulette")
-        }
+        return Text(self.safeTitle(for: index))
+            .font(.system(size: geometry.size.width / 30))
+            .rotationEffect(.degrees(rotatedAngle), anchor: .center)
+            .offset(x: geometry.size.width / 2, y: geometry.size.height / 2)
+            .position(x: geometry.size.width / 2.2 * CGFloat(cos((angle + (anglePerSegment / 2)) * Double.pi / 180)), // Half of the angle per segment is added
+                      y: geometry.size.height / 3.0 * CGFloat(sin((angle + (anglePerSegment / 2)) * Double.pi / 180))) // Half of the angle per segment is added
     }
+    
+   func sectionPath(_ index: Int, geometry: GeometryProxy) -> Path {
+       Path { path in
+           let width = geometry.size.width
+           let height = geometry.size.height
+           let segment = Angle(degrees: 360 / Double(self.sectionTitles.count))
+           let start = Angle(degrees: segment.degrees * Double(index))
+           path.move(to: .init(x: width / 2, y: height / 2))
+           path.addArc(center: .init(x: width / 2, y: height / 2), radius: width / 2, startAngle: start, endAngle: start + segment, clockwise: false)
+           path.closeSubpath()
+       }
+   }
+    
+   func colorForSection(_ index: Int) -> Color {
+       switch index % 4 {
+       case 0: return Color(red: 255/255, green: 105/255, blue: 180/255) // HotPink
+       case 1: return Color(red: 152/255, green: 251/255, blue: 152/255) // PaleGreen
+       case 2: return Color(red: 240/255, green: 230/255, blue: 140/255) // Khaki
+       case 3: return Color(red: 135/255, green: 206/255, blue: 235/255) // SkyBlue
+       default: return Color.blue // fallback color
+       }
+   }
+    
+    func safeTitle(for index: Int) -> String {
+            if sectionTitles.indices.contains(index) {
+                return sectionTitles[index]
+            } else {
+                return ""
+            }
+        }
 }
 
-struct SettingsView: View {
-    @Binding var sectionTitles: [String]
-    @Binding var rotation: Double
-    @Binding var isSpinning: Bool
-    @State private var newTitle = ""
-    @State private var editingIndex: Int?
-    @Binding var animationDuration: Double
+struct SpinningAnimation: AnimatableModifier {
+   @Binding var isSpinning: Bool
+   var rotation: Double
+   @Binding var animationDuration: Double // 追加
+   var animatableData: Double {
+       get { return rotation }
+       set { rotation = newValue }
+   }
 
-    var body: some View {
-        VStack {
-            HStack {
-                TextField("Add new sake title", text: $newTitle, onCommit:  {
-                    if !newTitle.isEmpty {
-                        sectionTitles.append(newTitle)
-                        newTitle = ""
-                        resetRoulette()
-                    }
-                })
-                .textFieldStyle(RoundedBorderTextFieldStyle())
-                Button("Add") {
-                    if !newTitle.isEmpty {
-                        sectionTitles.append(newTitle)
-                        newTitle = ""
-                        resetRoulette()
-                    }
-                }
-            }
-            .padding()
+    func body(content: Content) -> some View {
+       return content
+           .rotationEffect(Angle(degrees: rotation))
+           .animation(isSpinning ? Animation.linear(duration: animationDuration) : .default)
+   }
+}
 
-            List {
-                ForEach(sectionTitles.indices, id: \.self) { index in
-                    HStack {
-                        if editingIndex == index {
-                            TextField("Edit sake title", text: Binding(
-                                get: { self.sectionTitles[index] },
-                                set: { self.sectionTitles[index] = $0 }
-                            ), onCommit: {
-                                self.editingIndex = nil
-                                resetRoulette()
-                            })
-                            .textFieldStyle(RoundedBorderTextFieldStyle())
-                        } else {
-                            Text(sectionTitles[index])
-                                .onTapGesture {
-                                    self.editingIndex = index
-                                }
-                        }
-                        Spacer()
-                        Button(action: {
-                            removeTitle(at: IndexSet(integer: index))
-                            resetRoulette()
-                        }) {
-                            Image(systemName: "trash")
-                                .foregroundColor(.red)
-                        }
-                    }
-                }
-            }
-            Text("ルーレット回転時間: \(animationDuration)")
-                .padding()
-            Slider(value: $animationDuration, in: 1.0...60.0)
-                            .padding()
-        }
-        .navigationTitle("設定")
-    }
-
-    private func removeTitle(at offsets: IndexSet) {
-        sectionTitles.remove(atOffsets: offsets)
-    }
-
-    private func resetRoulette() {
-        rotation = 0
-        isSpinning = false
+extension View {
+    func spinning(_ isSpinning: Binding<Bool>, totalRotation: Binding<Double>, animationDuration: Binding<Double>) -> some View {
+        self.modifier(SpinningAnimation(isSpinning: isSpinning, rotation: totalRotation.wrappedValue, animationDuration: animationDuration))
     }
 }
